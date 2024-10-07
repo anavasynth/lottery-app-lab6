@@ -1,225 +1,55 @@
 <template>
   <div class="lottery-app">
-    <!-- Winners Block -->
-    <div class="card">
-      <div class="d-flex">
-        <div class="winner-tags gray-border">
-          <span
-            v-for="(winner, index) in winners"
-            :key="index"
-            class="badge blue"
-          >
-            {{ winner.name }}
-            <button @click="removeWinner(index)" class="btn btn-sm btn-danger">
-              &times;
-            </button>
-          </span>
-          <span class="badge">Winners</span>
-        </div>
-      </div>
-      <button
-        class="btn btn-primary mt-2"
-        :disabled="winners.length >= 3 || participants.length === 0"
-        @click="selectWinner"
-      >
-        New winner
-      </button>
-    </div>
-
-    <!-- Registration Form -->
-    <div class="card">
-      <h3>REGISTER FORM</h3>
-      <p>Please fill in all the fields.</p>
-      <form @submit.prevent="registerParticipant" novalidate>
-        <div class="form-group">
-          <label>Name</label>
-          <input
-            v-model="newParticipant.name"
-            type="text"
-            class="form-control"
-            placeholder="Enter user name"
-            :class="{ 'is-invalid': nameError }"
-            required
-          />
-          <div class="text-danger" v-if="nameError">{{ nameError }}</div>
-        </div>
-        <div class="form-group">
-          <label>Date of Birth</label>
-          <input
-            v-model="newParticipant.dateOfBirth"
-            type="date"
-            class="form-control"
-            :max="today"
-            :class="{ 'is-invalid': dateError }"
-            required
-          />
-          <div class="text-danger" v-if="dateError">{{ dateError }}</div>
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input
-            v-model="newParticipant.email"
-            type="email"
-            class="form-control"
-            placeholder="Enter email"
-            :class="{ 'is-invalid': emailError }"
-            required
-          />
-          <div class="text-danger" v-if="emailError">{{ emailError }}</div>
-        </div>
-        <div class="form-group">
-          <label>Phone number</label>
-          <input
-            v-model="newParticipant.phoneNumber"
-            type="tel"
-            class="form-control"
-            placeholder="Enter phone number"
-            :class="{ 'is-invalid': phoneError }"
-            required
-          />
-          <div class="text-danger" v-if="phoneError">{{ phoneError }}</div>
-        </div>
-        <button type="submit" class="btn btn-primary">Save</button>
-      </form>
-    </div>
-
-    <!-- Participants Table -->
-    <div class="card">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Date of Birth</th>
-            <th>Email</th>
-            <th>Phone number</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(participant, index) in participants" :key="index">
-            <td>{{ index + 1 }}</td>
-            <td>{{ participant.name }}</td>
-            <td>{{ participant.dateOfBirth }}</td>
-            <td>{{ participant.email }}</td>
-            <td>{{ participant.phoneNumber }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <WinnerManager
+      :participants="participants"
+      :winners="winners"
+      @winnerSelected="addWinner"
+      @winnerRemoved="removeWinner"
+    />
+    <ParticipantForm @participantRegistered="registerParticipant" />
+    <ParticipantTable :participants="participants" />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from "vue";
-import { Validator } from "@/misc/Validator";
 import { Participant } from "@/models/Participant";
+import WinnerManager from "@/components/WinnerManager.vue";
+import ParticipantForm from "@/components/ParticipantForm.vue";
+import ParticipantTable from "@/components/ParticipantTable.vue";
 
 export default defineComponent({
   name: "LotteryApp",
+  components: {
+    WinnerManager,
+    ParticipantForm,
+    ParticipantTable,
+  },
   setup() {
-    const today = new Date().toISOString().split("T")[0]; // Current date
-    const newParticipant = ref<Participant>({
-      name: "",
-      dateOfBirth: "",
-      email: "",
-      phoneNumber: "",
-    });
-
-    // Participants
     const participants = ref<Participant[]>([
-      {
-        name: "John Doe",
-        dateOfBirth: "1990-01-01",
-        email: "john@example.com",
-        phoneNumber: "+1234567890",
-      },
-      {
-        name: "Jane Smith",
-        dateOfBirth: "1985-05-15",
-        email: "jane@example.com",
-        phoneNumber: "+1987654321",
-      },
-      {
-        name: "Alice Johnson",
-        dateOfBirth: "1992-03-10",
-        email: "alice@example.com",
-        phoneNumber: "+11234567890",
-      },
-      {
-        name: "Bob Brown",
-        dateOfBirth: "1988-07-22",
-        email: "bob@example.com",
-        phoneNumber: "+19987654321",
-      },
-      {
-        name: "Charlie Green",
-        dateOfBirth: "1995-10-05",
-        email: "charlie@example.com",
-        phoneNumber: "+17654321098",
-      },
+      // Sample participants
     ]);
     const winners = ref<Participant[]>([]);
 
-    // Error messages
-    const nameError = ref("");
-    const dateError = ref("");
-    const emailError = ref("");
-    const phoneError = ref("");
-
-    const registerParticipant = () => {
-      nameError.value = Validator.validateName(newParticipant.value.name);
-      dateError.value = Validator.validateDateOfBirth(
-        newParticipant.value.dateOfBirth,
-        today
-      );
-      emailError.value = Validator.validateEmail(newParticipant.value.email);
-      phoneError.value = Validator.validatePhoneNumber(
-        newParticipant.value.phoneNumber
-      );
-
-      if (
-        nameError.value ||
-        dateError.value ||
-        emailError.value ||
-        phoneError.value
-      ) {
-        return;
-      }
-
-      participants.value.push({ ...newParticipant.value });
-      newParticipant.value.name = "";
-      newParticipant.value.dateOfBirth = "";
-      newParticipant.value.email = "";
-      newParticipant.value.phoneNumber = "";
+    const registerParticipant = (participant: Participant) => {
+      participants.value.push(participant);
     };
 
-    const selectWinner = () => {
-      if (participants.value.length > 0 && winners.value.length < 3) {
-        const randomIndex = Math.floor(
-          Math.random() * participants.value.length
-        );
-        const winner = participants.value[randomIndex];
-        winners.value.push(winner);
-        participants.value.splice(randomIndex, 1);
-      }
+    const addWinner = (winner: Participant) => {
+      winners.value.push(winner);
+      participants.value = participants.value.filter((p) => p !== winner);
     };
 
     const removeWinner = (index: number) => {
-      participants.value.push(winners.value[index]);
-      winners.value.splice(index, 1);
+      const winner = winners.value.splice(index, 1)[0];
+      participants.value.push(winner);
     };
 
     return {
-      newParticipant,
       participants,
       winners,
-      nameError,
-      dateError,
-      emailError,
-      phoneError,
-      today,
       registerParticipant,
-      selectWinner,
+      addWinner,
       removeWinner,
     };
   },
